@@ -1,10 +1,6 @@
 from django.urls import path, include
 from .views import *
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 
 router = DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet)
@@ -18,4 +14,6 @@ router.register(r'historicos-recentes', HistoricosRecentesViewSet, basename='his
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('register/', RegisterView.as_view(), name='register'),
+    path('importar-dados/', ImportarDadosView.as_view()),
 ]

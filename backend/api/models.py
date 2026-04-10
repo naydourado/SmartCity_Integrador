@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.models import User
 
 # Locais
 class Local(models.Model):
@@ -137,6 +137,7 @@ class Usuario(models.Model):
         ('user', 'Usuário'),
     ]
 
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user")
     nome = models.CharField(max_length=100)
     telefone = models.CharField(max_length=20)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
