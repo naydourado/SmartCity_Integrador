@@ -26,11 +26,10 @@ export default function Register() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // ✅ busca choices do backend (público)
   useEffect(() => {
     const buscarTipos = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/usuarios/tipo_choices/");
+        const res = await axios.get("http://127.0.0.1:8000/api/usuarios/tipo-choices/");
         setTipos(res.data || []);
       } catch (e) {
         console.log("Erro ao buscar choices:", e);

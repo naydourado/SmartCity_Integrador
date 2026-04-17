@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Locais
+
 class Local(models.Model):
     idLocal = models.AutoField(primary_key=True)
     nome = models.CharField(max_length=100)
@@ -11,9 +11,8 @@ class Local(models.Model):
 
     def __str__(self):
         return self.nome
-    
 
-# Responsáveis
+
 class Responsavel(models.Model):
     idResponsavel = models.AutoField(primary_key=True)
     nome = models.CharField(max_length=100)
@@ -23,9 +22,8 @@ class Responsavel(models.Model):
 
     def __str__(self):
         return self.nome
-    
-    
-# Ambientes
+
+
 class Ambiente(models.Model):
     idAmbiente = models.AutoField(primary_key=True)
 
@@ -48,8 +46,8 @@ class Ambiente(models.Model):
 
     def __str__(self):
         return self.descricao
-    
-# Microcontroladores
+
+
 class Microcontrolador(models.Model):
     idMicro = models.AutoField(primary_key=True)
 
@@ -72,7 +70,6 @@ class Microcontrolador(models.Model):
         return self.modelo
 
 
-# Sensores
 class Sensor(models.Model):
     idSensor = models.AutoField(primary_key=True)
 
@@ -108,7 +105,6 @@ class Sensor(models.Model):
         return self.sensor
 
 
-# Históricos
 class Historico(models.Model):
     idHistorico = models.AutoField(primary_key=True)
 
@@ -126,9 +122,8 @@ class Historico(models.Model):
 
     def __str__(self):
         return f"{self.sensor} - {self.valor}"
-    
 
-# Usuários
+
 class Usuario(models.Model):
     idUsuario = models.AutoField(primary_key=True)
 
@@ -137,9 +132,13 @@ class Usuario(models.Model):
         ('user', 'Usuário'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user")
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        db_column='user'
+    )
     nome = models.CharField(max_length=100)
-    telefone = models.CharField(max_length=20)
+    telefone = models.CharField(max_length=20, blank=True, default='')
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
 
     class Meta:

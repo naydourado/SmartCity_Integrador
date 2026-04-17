@@ -1,4 +1,3 @@
-// src/pages/login/index.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -18,43 +17,39 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // 1) Login e pega o token JWT
       const response = await axios.post("http://127.0.0.1:8000/api/token/", {
         username: user,
         password: password,
       });
 
       const access = response.data.access;
-      console.log("XXX", access);
-      
-      // Salva o token
+
       localStorage.setItem("token", access);
 
-      // 2) Busca os dados do usuário logado
       const me = await axios.get("http://127.0.0.1:8000/api/usuarios/me/", {
-        headers: { Authorization: `Bearer ${access}` },
+        headers: {
+          Authorization: `Bearer ${access}`,
+        },
       });
-      
-      const { is_superuser, is_staff, is_active } = me.data;
 
-      
-      // 3) Se usuário estiver inativo, bloqueia
-      if (!is_active) {
+      localStorage.setItem("usuario", JSON.stringify(me.data));
+
+      if (!me.data.is_active) {
         localStorage.removeItem("token");
+        localStorage.removeItem("usuario");
         setMessage("Usuário inativo. Contate o administrador.");
-        setLoading(false);
         return;
       }
 
-      // 4) Redirecionamento por perfil
-      if (is_staff) {
+      if (me.data.tipo === "admin") {
         navigate("/admin/home");
       } else {
         navigate("/user/home");
       }
     } catch (error) {
-      console.log("Error: ", error);
+      console.log("Erro no login:", error);
       localStorage.removeItem("token");
+      localStorage.removeItem("usuario");
       setMessage("Usuário ou senha inválidos.");
     } finally {
       setLoading(false);
@@ -63,61 +58,64 @@ export default function Login() {
 
   return (
     <div className="loginPage">
-      <div className="loginCard">
-        <div className="loginHeader">
-          <h1 className="loginTitle">Acessar sistema</h1>
-          <p className="loginSubtitle">Entre com suas credenciais para continuar</p>
+      <div className="loginLeft">
+        <div className="brandTop">
+          <div>
+            <h2>Smart City TecnoVille</h2>
+            <p>Projeto Integrador · SENAI</p>
+          </div>
         </div>
 
-        <form className="loginForm" onSubmit={logar}>
-          <div className="field">
-            <label className="label">Usuário</label>
-            <input
-              className="input"
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              placeholder="Digite seu usuário"
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="field">
-            <label className="label">Senha</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Digite sua senha"
-              autoComplete="current-password"
-            />
-          </div>
-
-          {message && <div className="alert">{message}</div>}
-
-          <button className="btnPrimary" type="submit" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-
-          <div className="divider">
-            <span>ou</span>
-          </div>
-
-          <div className="footerActions">
-            <p className="footerText">
-              Ainda não tem conta?{" "}
-              <Link className="link" to="/register">
-                Cadastre-se
-              </Link>
-            </p>
-          </div>
-        </form>
-
-        <div className="loginFooter">
+        <div className="leftContent">
+          <h1>Monitore sua cidade inteligente em tempo real.</h1>
           <p>
-            © {new Date().getFullYear()} • Desenvolvido por{" "}
-            <strong>Lindomar José Batistão</strong>
+            Temperatura, umidade, luminosidade e contagem — todos os seus
+            sensores IoT em um único painel.
           </p>
+        </div>
+
+        <div className="leftFooter">© 2026 SENAI</div>
+      </div>
+
+      <div className="loginRight">
+        <div className="loginCard">
+          <div className="loginHeader">
+            <h1 className="loginTitle">Entrar</h1>
+            <p className="loginSubtitle">Acesse o painel de monitoramento.</p>
+          </div>
+
+          <form className="loginForm" onSubmit={logar}>
+            <div className="field">
+              <label className="label">Usuário</label>
+              <input
+                className="input"
+                value={user}
+                onChange={(e) => setUser(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+
+            <div className="field">
+              <label className="label">Senha</label>
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+
+            {message && <div className="alert">{message}</div>}
+
+            <button className="btnPrimary" type="submit" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+
+            <p className="registerText">
+              Ainda não tem conta? <Link to="/register">Cadastre-se</Link>
+            </p>
+          </form>
         </div>
       </div>
     </div>

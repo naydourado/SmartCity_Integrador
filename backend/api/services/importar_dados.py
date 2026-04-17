@@ -1,7 +1,6 @@
 import pandas as pd
 from api.models import Local, Responsavel, Ambiente, Microcontrolador, Sensor, Historico
 
-
 class ImportacaoDadosService:
     def importar(self):
 

@@ -11,6 +11,7 @@ from .models import Usuario, Responsavel, Local, Ambiente, Microcontrolador, Sen
 from .serializers import (
     RegisterSerializer,
     UsuarioSerializer,
+    UsuarioMeSerializer,
     ResponsavelSerializer,
     LocalSerializer,
     AmbienteSerializer,
@@ -18,7 +19,6 @@ from .serializers import (
     SensorSerializer,
     HistoricoSerializer
 )
-
 from .services.importar_dados import ImportacaoDadosService
 
 
@@ -27,17 +27,43 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticated]
 
-    @action(
-        detail=False,
-        methods=['get'],
-        url_path='tipo-choices',
-        permission_classes=[AllowAny]
-    )
+    def get_permissions(self):
+        if self.action == 'tipo_choices':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        if self.request.user.is_staff:
+            return qs
+
+        return qs.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == 'me':
+            return UsuarioMeSerializer
+        return super().get_serializer_class()
+
+    @action(detail=False, methods=['get'], url_path='tipo-choices')
     def tipo_choices(self, request):
         return Response([
             {"value": valor, "label": nome}
             for valor, nome in Usuario.TIPO_CHOICES
         ])
+
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        usuario = Usuario.objects.filter(user=request.user).first()
+
+        if not usuario:
+            return Response(
+                {'detail': 'Perfil de usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = self.get_serializer(usuario)
+        return Response(serializer.data)
 
 
 class RegisterView(APIView):
