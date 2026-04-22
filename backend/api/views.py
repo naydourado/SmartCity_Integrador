@@ -3,6 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
@@ -30,27 +31,24 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'tipo_choices':
             return [AllowAny()]
+        if self.action == 'me':
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
         qs = super().get_queryset()
 
+        # admin vê todos os usuários
         if self.request.user.is_staff:
             return qs
 
+        # user comum vê só o próprio perfil
         return qs.filter(user=self.request.user)
 
     def get_serializer_class(self):
         if self.action == 'me':
             return UsuarioMeSerializer
         return super().get_serializer_class()
-
-    @action(detail=False, methods=['get'], url_path='tipo-choices')
-    def tipo_choices(self, request):
-        return Response([
-            {"value": valor, "label": nome}
-            for valor, nome in Usuario.TIPO_CHOICES
-        ])
 
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
@@ -64,6 +62,20 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(usuario)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='tipo-choices')
+    def tipo_choices(self, request):
+        return Response([
+            {"value": valor, "label": nome}
+            for valor, nome in Usuario.TIPO_CHOICES
+        ])
+
+    def dispatch(self, request, *args, **kwargs):
+        # user comum não pode criar, editar ou excluir usuários
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class RegisterView(APIView):
@@ -85,6 +97,13 @@ class ResponsavelViewSet(viewsets.ModelViewSet):
     serializer_class = ResponsavelSerializer
     permission_classes = [IsAuthenticated]
 
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
+
 
 class LocalViewSet(viewsets.ModelViewSet):
     queryset = Local.objects.all()
@@ -92,6 +111,13 @@ class LocalViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['nome']
+
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class AmbienteViewSet(viewsets.ModelViewSet):
@@ -101,6 +127,13 @@ class AmbienteViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['local', 'responsavel', 'descricao']
 
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
+
 
 class MicrocontroladorViewSet(viewsets.ModelViewSet):
     queryset = Microcontrolador.objects.all()
@@ -109,6 +142,13 @@ class MicrocontroladorViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['modelo', 'status', 'ambiente']
 
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
+
 
 class SensorViewSet(viewsets.ModelViewSet):
     queryset = Sensor.objects.all()
@@ -116,6 +156,13 @@ class SensorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['sensor', 'status', 'mic']
+
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class HistoricoViewSet(viewsets.ModelViewSet):
@@ -131,6 +178,13 @@ class HistoricoViewSet(viewsets.ModelViewSet):
         'sensor__mic__ambiente': ['exact'],
         'sensor__mic__ambiente__local': ['exact'],
     }
+
+    def dispatch(self, request, *args, **kwargs):
+        # user comum só visualiza
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            if not request.user.is_staff:
+                raise PermissionDenied("Você não tem permissão para essa ação.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class HistoricosRecentesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -153,6 +207,10 @@ class ImportarDadosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # só admin pode importar
+        if not request.user.is_staff:
+            raise PermissionDenied("Você não tem permissão para importar dados.")
+
         try:
             service = ImportacaoDadosService()
             resultado = service.importar()

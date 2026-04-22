@@ -1,0 +1,237 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.historicosPage {
+  min-height: 100vh;
+  display: flex;
+  background: #f3f4f6;
+}
+
+.historicosSidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #3568e8 0%, #5d95f0 100%);
+  color: white;
+  padding: 28px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.brandTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.brandTop h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.brandTop p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.sidebarMenu {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menuItem {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: white;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.menuItem:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.menuItem.active {
+  background: rgba(255, 255, 255, 0.18);
+  font-weight: bold;
+}
+
+.logoutButton {
+  width: 100%;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.historicosContent {
+  flex: 1;
+  padding: 34px;
+}
+
+.contentHeader h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 34px;
+}
+
+.contentHeader p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.topInfo {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.infoBox {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.infoBox span {
+  display: block;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.infoBox strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 32px;
+  color: #0f172a;
+}
+
+.tableCard {
+  margin-top: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tableHeader h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.searchInput {
+  width: 320px;
+  max-width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #d6dbe5;
+  border-radius: 10px;
+  background: white;
+  color: #0f172a;
+  outline: none;
+  font-size: 14px;
+}
+
+.searchInput:focus {
+  border-color: #3568e8;
+  box-shadow: 0 0 0 3px rgba(53, 104, 232, 0.12);
+}
+
+.historicosTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.historicosTable thead {
+  background: #f8fafc;
+}
+
+.historicosTable th,
+.historicosTable td {
+  text-align: left;
+  padding: 14px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.historicosTable th {
+  font-weight: 700;
+  color: #334155;
+}
+
+.loadingText,
+.emptyText {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+@media (max-width: 960px) {
+  .historicosPage {
+    flex-direction: column;
+  }
+
+  .historicosSidebar {
+    width: 100%;
+  }
+
+  .historicosContent {
+    padding: 24px;
+  }
+
+  .topInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .tableHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+}
