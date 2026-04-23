@@ -55,7 +55,7 @@ export default function Ambientes() {
   }
 
   return (
-    <AppShell title="Ambientes" subtitle="CRUD completo para administrador e visualização para usuário.">
+    <AppShell title="Ambientes" subtitle="CRUD de ambientes.">
       <section className="page-grid">
         {admin && (
           <form className="card form-grid" onSubmit={save}>
