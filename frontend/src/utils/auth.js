@@ -18,5 +18,9 @@ export function getUser() {
 }
 
 export function isAdmin(user = getUser()) {
-  return ["admin", "Administrador"].includes(user?.tipo);
+  return Boolean(
+    user?.is_staff ||
+    user?.is_superuser ||
+    user?.tipo === "admin"
+  );
 }

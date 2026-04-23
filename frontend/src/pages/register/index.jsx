@@ -9,7 +9,7 @@ const initialState = {
   email: "",
   password: "",
   telefone: "",
-  tipo: "Usuário",
+  tipo: "user",
 };
 
 export default function Register() {
@@ -25,11 +25,13 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await api.post("/usuarios/", form);
+      console.log(initialState)
+      await api.post("/register/", form);
       setMessage("Usuário cadastrado com sucesso.");
       setForm(initialState);
     } catch (err) {
-      setError("Não foi possível cadastrar. Verifique se o endpoint de usuários aceita esse formato.");
+      console.error(err.response?.data || err);
+      setError("Não foi possível cadastrar o usuário.");
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,6 @@ export default function Register() {
       <section className="auth-hero">
         <span className="hero-badge">Cadastro</span>
         <h1>Novo usuário</h1>
-        <p>Esta página é desejável no projeto e já deixa o front preparado.</p>
       </section>
 
       <form className="auth-card" onSubmit={handleSubmit}>

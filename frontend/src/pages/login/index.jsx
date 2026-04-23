@@ -18,6 +18,7 @@ export default function Login() {
     try {
       const tokenResponse = await axios.post("http://127.0.0.1:8000/api/token/", form);
       const access = tokenResponse.data.access;
+      localStorage.setItem(access, "token")
 
       const meResponse = await axios.get("http://127.0.0.1:8000/api/usuarios/me/", {
         headers: { Authorization: `Bearer ${access}` },
@@ -26,7 +27,10 @@ export default function Login() {
       const user = meResponse.data;
       saveAuth(access, user);
 
-      const home = ["admin", "Administrador"].includes(user?.tipo) ? "/admin/home" : "/user/home";
+      const home =
+        user?.is_staff || user?.is_superuser || ["admin", "Administrador"].includes(user?.tipo)
+          ? "/admin/home"
+          : "/user/home";
       navigate(home);
     } catch (err) {
       setError("Usuário ou senha inválidos.");
@@ -41,10 +45,10 @@ export default function Login() {
         <span className="hero-badge">Projeto Integrador · SENAI</span>
         <h1>Smart City TecnoVille</h1>
         <h2>Monitore sua cidade inteligente em tempo real.</h2>
-          <p>
-            Temperatura, umidade, luminosidade e contagem — todos os seus
-            sensores IoT em um único painel.
-          </p>
+        <p>
+          Temperatura, umidade, luminosidade e contagem — todos os seus
+          sensores IoT em um único painel.
+        </p>
       </section>
 
       <form className="auth-card" onSubmit={handleSubmit}>

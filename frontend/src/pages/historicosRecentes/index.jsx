@@ -16,7 +16,7 @@ export default function HistoricosRecentes() {
   }, []);
 
   return (
-    <AppShell title="Históricos recentes" subtitle="Endpoint específico das últimas 24 horas.">
+    <AppShell title="Históricos recentes" subtitle="Últimas 24 horas.">
       <div className="card">
         <div className="table-wrapper">
           <table className="table">

@@ -7,6 +7,15 @@ from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
+from .filters import (
+    UsuarioFilter,
+    LocalFilter,
+    ResponsavelFilter,
+    AmbienteFilter,
+    MicrocontroladorFilter,
+    SensorFilter,
+    HistoricoFilter
+)
 
 from .models import Usuario, Responsavel, Local, Ambiente, Microcontrolador, Sensor, Historico
 from .serializers import (
@@ -22,11 +31,13 @@ from .serializers import (
 )
 from .services.importar_dados import ImportacaoDadosService
 
-
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticated]
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = UsuarioFilter
 
     def get_permissions(self):
         if self.action == 'tipo_choices':
@@ -50,23 +61,32 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
-        usuario = Usuario.objects.filter(user=request.user).first()
+        usuario, created = Usuario.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'nome': request.user.get_full_name() or request.user.username,
+                'telefone': '',
+                'tipo': 'admin' if request.user.is_staff or request.user.is_superuser else 'user'
+            }
+        )
 
-        if not usuario:
-            return Response(
-                {'detail': 'Perfil de usuário não encontrado.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        tipo_correto = 'admin' if request.user.is_staff or request.user.is_superuser else 'user'
+
+        alterado = False
+
+        if usuario.tipo != tipo_correto:
+            usuario.tipo = tipo_correto
+            alterado = True
+
+        if not usuario.nome:
+            usuario.nome = request.user.get_full_name() or request.user.username
+            alterado = True
+
+        if alterado:
+            usuario.save()
 
         serializer = self.get_serializer(usuario)
         return Response(serializer.data)
-
-    @action(detail=False, methods=['get'], url_path='tipo-choices')
-    def tipo_choices(self, request):
-        return Response([
-            {"value": valor, "label": nome}
-            for valor, nome in Usuario.TIPO_CHOICES
-        ])
 
 
 class RegisterView(APIView):
@@ -88,13 +108,6 @@ class ResponsavelViewSet(viewsets.ModelViewSet):
     serializer_class = ResponsavelSerializer
     permission_classes = [IsAuthenticated]
 
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
-
 
 class LocalViewSet(viewsets.ModelViewSet):
     queryset = Local.objects.all()
@@ -103,27 +116,13 @@ class LocalViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['nome']
 
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
-
 
 class AmbienteViewSet(viewsets.ModelViewSet):
     queryset = Ambiente.objects.all()
     serializer_class = AmbienteSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['local', 'responsavel', 'descricao']
-
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
+    filterset_class = AmbienteFilter
 
 
 class MicrocontroladorViewSet(viewsets.ModelViewSet):
@@ -131,14 +130,7 @@ class MicrocontroladorViewSet(viewsets.ModelViewSet):
     serializer_class = MicrocontroladorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['modelo', 'status', 'ambiente']
-
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
+    filterset_class = MicrocontroladorFilter
 
 
 class SensorViewSet(viewsets.ModelViewSet):
@@ -146,14 +138,7 @@ class SensorViewSet(viewsets.ModelViewSet):
     serializer_class = SensorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['sensor', 'status', 'mic']
-
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
+    filterset_class = SensorFilter
 
 
 class HistoricoViewSet(viewsets.ModelViewSet):
@@ -161,33 +146,14 @@ class HistoricoViewSet(viewsets.ModelViewSet):
     serializer_class = HistoricoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = {
-        'sensor': ['exact'],
-        'timestamp': ['exact', 'gte', 'lte'],
-        'sensor__sensor': ['exact'],
-        'sensor__status': ['exact'],
-        'sensor__mic__ambiente': ['exact'],
-        'sensor__mic__ambiente__local': ['exact'],
-    }
-
-    def dispatch(self, request, *args, **kwargs):
-        # user comum só visualiza
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
+    filterset_class = HistoricoFilter
 
 
 class HistoricosRecentesViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = HistoricoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = {
-        'sensor': ['exact'],
-        'sensor__sensor': ['exact'],
-        'sensor__status': ['exact'],
-        'sensor__mic__ambiente__local': ['exact'],
-    }
+    filterset_class = HistoricoFilter
 
     def get_queryset(self):
         ultimas_24h = timezone.now() - timedelta(hours=24)
@@ -198,7 +164,6 @@ class ImportarDadosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # só admin pode importar
         if not request.user.is_staff:
             raise PermissionDenied("Você não tem permissão para importar dados.")
 
