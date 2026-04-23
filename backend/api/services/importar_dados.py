@@ -36,7 +36,6 @@ class ImportacaoDadosService:
         Local.objects.all().delete()
 
         # ---------------- LOCAIS ----------------
-        # como a planilha não tem id, vamos usar a ordem das linhas
         for i in range(len(locais)):
             Local.objects.create(
                 idLocal=i + 1,
@@ -52,7 +51,6 @@ class ImportacaoDadosService:
             )
 
         # ---------------- AMBIENTES ----------------
-        # aqui a planilha já usa os ids de local e responsável
         for i in range(len(ambientes)):
             Ambiente.objects.create(
                 idAmbiente=i + 1,

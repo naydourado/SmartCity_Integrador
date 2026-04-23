@@ -1,181 +1,206 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import "./styles.css";
+import { useEffect, useMemo, useState } from "react";
+import AppShell from "../../components/AppShell";
+import api from "../../services/api";
+import { getUser, isAdmin } from "../../utils/auth";
+import { formatDateTime } from "../../utils/format";
+import "../../components/ui.css";
+
+const initialForm = {
+  sensor: "",
+  valor: "",
+  timestamp: "",
+};
 
 export default function Historicos() {
-  const navigate = useNavigate();
-
+  const admin = isAdmin(getUser());
   const [historicos, setHistoricos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState("");
+  const [sensores, setSensores] = useState([]);
+  const [filters, setFilters] = useState({ sensor: "", data: "" });
+  const [form, setForm] = useState(initialForm);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function loadData() {
+    try {
+      const [historicosRes, sensoresRes] = await Promise.all([
+        api.get("/historicos/"),
+        api.get("/sensores/"),
+      ]);
+
+      setHistoricos(
+        Array.isArray(historicosRes.data)
+          ? historicosRes.data
+          : historicosRes.data.results || []
+      );
+
+      setSensores(
+        Array.isArray(sensoresRes.data)
+          ? sensoresRes.data
+          : sensoresRes.data.results || []
+      );
+    } catch {
+      setError("Não foi possível carregar os históricos.");
+    }
+  }
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    loadData();
+  }, []);
 
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+  const filtered = useMemo(() => {
+    return historicos.filter((item) => {
+      const bySensor = filters.sensor
+        ? String(item.sensor) === filters.sensor ||
+        String(item.sensor_id) === filters.sensor
+        : true;
 
-    async function carregarHistoricos() {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/api/historicos/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const byDate = filters.data
+        ? String(item.timestamp || "").slice(0, 10) === filters.data
+        : true;
 
-        setHistoricos(response.data);
-      } catch (error) {
-        console.log("Erro ao buscar históricos:", error);
-
-        if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("usuario");
-          navigate("/login");
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    carregarHistoricos();
-  }, [navigate]);
-
-  const sair = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    navigate("/login");
-  };
-
-  const formatarData = (data) => {
-    if (!data) return "-";
-
-    const novaData = new Date(data);
-
-    return novaData.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      return bySensor && byDate;
     });
-  };
+  }, [historicos, filters]);
 
-  const historicosFiltrados = historicos.filter((historico) => {
-    if (!filtro) return true;
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setMessage("");
+    setError("");
 
-    return (
-      String(historico.idHistorico).includes(filtro) ||
-      String(historico.sensor).includes(filtro) ||
-      String(historico.valor).includes(filtro) ||
-      String(historico.timestamp).toLowerCase().includes(filtro.toLowerCase())
-    );
-  });
+    const payload = {
+      sensor: Number(form.sensor),
+      valor: Number(form.valor),
+      timestamp: form.timestamp ? `${form.timestamp}:00` : "",
+    };
+
+    try {
+      await api.post("/historicos/", payload);
+      setMessage("Medição cadastrada com sucesso.");
+      setForm(initialForm);
+      loadData();
+    } catch (err) {
+      console.error("ERRO HISTÓRICO:", err.response?.data || err);
+      setError("Não foi possível cadastrar a medição.");
+    }
+  }
 
   return (
-    <div className="historicosPage">
-      <aside className="historicosSidebar">
-        <div>
-          <div className="brandTop">
-            <div className="brandIcon">S</div>
-            <div>
-              <h2>Smart City TecnoVille</h2>
-              <p>Projeto Integrador · SENAI</p>
-            </div>
-          </div>
+    <AppShell title="Históricos" subtitle="Listagem e entrada manual de medições.">
+      <section className="page-grid">
+        <div className="card toolbar">
+          <select
+            className="select"
+            value={filters.sensor}
+            onChange={(e) => setFilters({ ...filters, sensor: e.target.value })}
+          >
+            <option value="">Todos os sensores</option>
+            {sensores.map((item) => {
+              const id = item.id || item.idSensor;
+              return (
+                <option key={id} value={id}>
+                  {item.sensor} - ID {id}
+                </option>
+              );
+            })}
+          </select>
 
-          <nav className="sidebarMenu">
-            <button className="menuItem" onClick={() => navigate("/admin/home")}>
-              Home
-            </button>
-
-            <button className="menuItem" onClick={() => navigate("/sensores")}>
-              Sensores
-            </button>
-
-            <button className="menuItem active">
-              Históricos
-            </button>
-          </nav>
+          <input
+            className="input"
+            type="datetime-local"
+            value={filters.data}
+            onChange={(e) => setFilters({ ...filters, data: e.target.value })}
+          />
         </div>
 
-        <button className="logoutButton" onClick={sair}>
-          Sair
-        </button>
-      </aside>
+        {admin && (
+          <form className="card form-grid" onSubmit={handleSubmit}>
+            <h3 className="full">Entrada manual de medições</h3>
 
-      <main className="historicosContent">
-        <header className="contentHeader">
-          <div>
-            <h1>Históricos</h1>
-            <p>Visualize todas as medições registradas no sistema.</p>
-          </div>
-        </header>
+            <label>
+              Sensor
+              <select
+                className="select"
+                value={form.sensor}
+                onChange={(e) => setForm({ ...form, sensor: e.target.value })}
+                required
+              >
+                <option value="">Selecione</option>
+                {sensores.map((item) => {
+                  const id = item.id || item.idSensor;
+                  return (
+                    <option key={id} value={id}>
+                      {item.sensor} - ID {id}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
 
-        <section className="topInfo">
-          <div className="infoBox">
-            <span>Total de medições</span>
-            <strong>{historicos.length}</strong>
-          </div>
+            <label>
+              Valor
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                value={form.valor}
+                onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                required
+              />
+            </label>
 
-          <div className="infoBox">
-            <span>Últimas 24h</span>
-            <strong>
-              {
-                historicos.filter((item) => {
-                  const agora = new Date();
-                  const dataItem = new Date(item.timestamp);
-                  const diff = agora - dataItem;
-                  return diff <= 24 * 60 * 60 * 1000;
-                }).length
-              }
-            </strong>
-          </div>
-        </section>
+            <label>
+              Timestamp
+              <input
+                className="input"
+                type="datetime-local"
+                value={form.timestamp}
+                onChange={(e) => setForm({ ...form, timestamp: e.target.value })}
+                required
+              />
+            </label>
 
-        <section className="tableCard">
-          <div className="tableHeader">
-            <h2>Lista de medições</h2>
+            <div className="actions full">
+              <button className="btn" type="submit">
+                Salvar medição
+              </button>
+            </div>
 
-            <input
-              className="searchInput"
-              type="text"
-              placeholder="Buscar por id, sensor, valor ou data"
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-            />
-          </div>
+            {message && <div className="message full">{message}</div>}
+            {error && <div className="message error full">{error}</div>}
+          </form>
+        )}
 
-          {loading ? (
-            <p className="loadingText">Carregando históricos...</p>
-          ) : historicosFiltrados.length === 0 ? (
-            <p className="emptyText">Nenhum histórico encontrado.</p>
-          ) : (
-            <table className="historicosTable">
+        <div className="card">
+          <div className="table-wrapper">
+            <table className="table">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Sensor</th>
                   <th>Valor</th>
-                  <th>Data e hora</th>
+                  <th>Timestamp</th>
                 </tr>
               </thead>
               <tbody>
-                {historicosFiltrados.map((historico) => (
-                  <tr key={historico.idHistorico}>
-                    <td>{historico.idHistorico}</td>
-                    <td>{historico.sensor}</td>
-                    <td>{historico.valor}</td>
-                    <td>{formatarData(historico.timestamp)}</td>
+                {filtered.map((item) => (
+                  <tr key={item.id || item.idHistorico || `${item.sensor}-${item.timestamp}`}>
+                    <td>{item.id || item.idHistorico || "-"}</td>
+                    <td>{item.sensor_nome || item.sensor || item.sensor_id || "-"}</td>
+                    <td>{item.valor ?? "-"}</td>
+                    <td>{formatDateTime(item.timestamp)}</td>
                   </tr>
                 ))}
+
+                {!filtered.length && (
+                  <tr>
+                    <td colSpan="4">Nenhum histórico encontrado.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
-          )}
-        </section>
-      </main>
-    </div>
+          </div>
+        </div>
+      </section>
+    </AppShell>
   );
 }

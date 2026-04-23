@@ -1,123 +1,89 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { saveAuth } from "../../utils/auth";
 import "./styles.css";
 
 export default function Login() {
-  const [user, setUser] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  const logar = async (e) => {
-    e.preventDefault();
-    setMessage("");
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/token/", {
-        username: user,
-        password: password,
+      const tokenResponse = await axios.post("http://127.0.0.1:8000/api/token/", form);
+      const access = tokenResponse.data.access;
+
+      const meResponse = await axios.get("http://127.0.0.1:8000/api/usuarios/me/", {
+        headers: { Authorization: `Bearer ${access}` },
       });
 
-      const access = response.data.access;
+      const user = meResponse.data;
+      saveAuth(access, user);
 
-      localStorage.setItem("token", access);
-
-      const me = await axios.get("http://127.0.0.1:8000/api/usuarios/me/", {
-        headers: {
-          Authorization: `Bearer ${access}`,
-        },
-      });
-
-      localStorage.setItem("usuario", JSON.stringify(me.data));
-
-      if (!me.data.is_active) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
-        setMessage("Usuário inativo. Contate o administrador.");
-        return;
-      }
-
-      if (me.data.tipo === "admin") {
-        navigate("/admin/home");
-      } else {
-        navigate("/user/home");
-      }
-    } catch (error) {
-      console.log("Erro no login:", error);
-      localStorage.removeItem("token");
-      localStorage.removeItem("usuario");
-      setMessage("Usuário ou senha inválidos.");
+      const home = ["admin", "Administrador"].includes(user?.tipo) ? "/admin/home" : "/user/home";
+      navigate(home);
+    } catch (err) {
+      setError("Usuário ou senha inválidos.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="loginPage">
-      <div className="loginLeft">
-        <div className="brandTop">
-          <div>
-            <h2>Smart City TecnoVille</h2>
-            <p>Projeto Integrador · SENAI</p>
-          </div>
-        </div>
-
-        <div className="leftContent">
-          <h1>Monitore sua cidade inteligente em tempo real.</h1>
+    <div className="auth-page">
+      <section className="auth-hero">
+        <span className="hero-badge">Projeto Integrador · SENAI</span>
+        <h1>Smart City TecnoVille</h1>
+        <h2>Monitore sua cidade inteligente em tempo real.</h2>
           <p>
             Temperatura, umidade, luminosidade e contagem — todos os seus
             sensores IoT em um único painel.
           </p>
-        </div>
+      </section>
 
-        <div className="leftFooter">© 2026 SENAI</div>
-      </div>
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <h2>Entrar</h2>
+        <p>Acesse o sistema de monitoramento.</p>
 
-      <div className="loginRight">
-        <div className="loginCard">
-          <div className="loginHeader">
-            <h1 className="loginTitle">Entrar</h1>
-            <p className="loginSubtitle">Acesse o painel de monitoramento.</p>
-          </div>
+        <label>
+          Usuário
+          <input
+            className="auth-input"
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            autoComplete="username"
+            required
+          />
+        </label>
 
-          <form className="loginForm" onSubmit={logar}>
-            <div className="field">
-              <label className="label">Usuário</label>
-              <input
-                className="input"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                autoComplete="username"
-              />
-            </div>
+        <label>
+          Senha
+          <input
+            className="auth-input"
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            autoComplete="current-password"
+            required
+          />
+        </label>
 
-            <div className="field">
-              <label className="label">Senha</label>
-              <input
-                className="input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
+        {error && <div className="auth-error">{error}</div>}
 
-            {message && <div className="alert">{message}</div>}
+        <button className="auth-button" type="submit" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </button>
 
-            <button className="btnPrimary" type="submit" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </button>
-
-            <p className="registerText">
-              Ainda não tem conta? <Link to="/register">Cadastre-se</Link>
-            </p>
-          </form>
-        </div>
-      </div>
+        <span className="auth-link-text">
+          Não tem conta? <Link to="/register">Cadastre-se</Link>
+        </span>
+      </form>
     </div>
   );
 }

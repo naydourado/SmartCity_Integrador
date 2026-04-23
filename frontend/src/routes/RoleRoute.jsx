@@ -1,16 +1,17 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { getToken, getUser } from "../utils/auth";
 
-export default function RoleRoute({ children, allow }) {
-  const token = localStorage.getItem("token");
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+export default function RoleRoute({ children, allow = [] }) {
+  const location = useLocation();
+  const token = getToken();
+  const user = getUser();
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (!usuario || !allow.includes(usuario.tipo)) {
-    return <Navigate to="/login" replace />;
+  if (!user || !allow.includes(user.tipo)) {
+    return <Navigate to="/user/home" replace />;
   }
 
   return children;

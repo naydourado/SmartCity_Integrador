@@ -1,100 +1,122 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import "../sensores/styles.css";
+import { useEffect, useState } from "react";
+import AppShell from "../../components/AppShell";
+import api from "../../services/api";
+import { getUser, isAdmin } from "../../utils/auth";
+import "../../components/ui.css";
+
+const initialForm = { local: "", descricao: "", responsavel: "" };
 
 export default function Ambientes() {
-  const navigate = useNavigate();
+  const admin = isAdmin(getUser());
+  const [ambientes, setAmbientes] = useState([]);
+  const [locais, setLocais] = useState([]);
+  const [responsaveis, setResponsaveis] = useState([]);
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
 
-  const [dados, setDados] = useState([]);
-  const [loading, setLoading] = useState(true);
+  async function loadData() {
+    const [ambientesRes, locaisRes, responsaveisRes] = await Promise.all([
+      api.get("/ambientes/"),
+      api.get("/locais/"),
+      api.get("/responsaveis/"),
+    ]);
+    setAmbientes(Array.isArray(ambientesRes.data) ? ambientesRes.data : ambientesRes.data.results || []);
+    setLocais(Array.isArray(locaisRes.data) ? locaisRes.data : locaisRes.data.results || []);
+    setResponsaveis(Array.isArray(responsaveisRes.data) ? responsaveisRes.data : responsaveisRes.data.results || []);
+  }
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
+  useEffect(() => { loadData(); }, []);
 
-    if (!token) {
-      navigate("/login");
-      return;
+  function edit(item) {
+    setEditingId(item.id || item.idAmbiente);
+    setForm({
+      local: item.local || item.local_id || "",
+      descricao: item.descricao || "",
+      responsavel: item.responsavel || item.responsavel_id || "",
+    });
+  }
+
+  async function save(event) {
+    event.preventDefault();
+    if (editingId) {
+      await api.put(`/ambientes/${editingId}/`, form);
+    } else {
+      await api.post("/ambientes/", form);
     }
+    setForm(initialForm);
+    setEditingId(null);
+    loadData();
+  }
 
-    async function buscar() {
-      try {
-        const res = await axios.get(
-          "http://127.0.0.1:8000/api/ambientes/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        setDados(res.data);
-      } catch (error) {
-        console.log(error);
-        if (error.response?.status === 401) navigate("/login");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    buscar();
-  }, []);
-
-  const sair = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+  async function remove(id) {
+    if (!window.confirm("Deseja excluir este ambiente?")) return;
+    await api.delete(`/ambientes/${id}/`);
+    loadData();
+  }
 
   return (
-    <div className="historicosPage">
-      <aside className="historicosSidebar">
-        <div>
-          <div className="brandTop">
-            <div className="brandIcon">S</div>
-            <div>
-              <h2>Smart City</h2>
-              <p>SENAI</p>
+    <AppShell title="Ambientes" subtitle="CRUD completo para administrador e visualização para usuário.">
+      <section className="page-grid">
+        {admin && (
+          <form className="card form-grid" onSubmit={save}>
+            <h3 className="full">{editingId ? "Editar ambiente" : "Cadastrar ambiente"}</h3>
+            <label>Local
+              <select className="select" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} required>
+                <option value="">Selecione</option>
+                {locais.map((item) => <option key={item.id || item.idLocal} value={item.id || item.idLocal}>{item.local || item.nome}</option>)}
+              </select>
+            </label>
+            <label>Responsável
+              <select className="select" value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} required>
+                <option value="">Selecione</option>
+                {responsaveis.map((item) => <option key={item.id || item.idResponsavel} value={item.id || item.idResponsavel}>{item.nome}</option>)}
+              </select>
+            </label>
+            <label className="full">Descrição<input className="input" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required /></label>
+            <div className="actions full">
+              <button className="btn" type="submit">{editingId ? "Salvar alterações" : "Cadastrar"}</button>
+              {editingId && <button className="btn-secondary" type="button" onClick={() => { setEditingId(null); setForm(initialForm); }}>Cancelar</button>}
             </div>
-          </div>
-
-          <nav className="sidebarMenu">
-            <button onClick={() => navigate("/admin/home")}>Home</button>
-            <button onClick={() => navigate("/sensores")}>Sensores</button>
-            <button className="menuItem active">Ambientes</button>
-          </nav>
-        </div>
-
-        <button className="logoutButton" onClick={sair}>
-          Sair
-        </button>
-      </aside>
-
-      <main className="historicosContent">
-        <h1>Ambientes</h1>
-
-        {loading ? (
-          <p>Carregando...</p>
-        ) : (
-          <table className="historicosTable">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Descrição</th>
-                <th>Local</th>
-                <th>Responsável</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.map((item) => (
-                <tr key={item.idAmbiente}>
-                  <td>{item.idAmbiente}</td>
-                  <td>{item.descricao}</td>
-                  <td>{item.local}</td>
-                  <td>{item.responsavel}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          </form>
         )}
-      </main>
-    </div>
+
+        <div className="card">
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Local</th>
+                  <th>Descrição</th>
+                  <th>Responsável</th>
+                  {admin && <th>Ações</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {ambientes.map((item) => {
+                  const id = item.id || item.idAmbiente;
+                  return (
+                    <tr key={id}>
+                      <td>{id}</td>
+                      <td>{item.local_nome || item.local || "-"}</td>
+                      <td>{item.descricao || "-"}</td>
+                      <td>{item.responsavel_nome || item.responsavel || "-"}</td>
+                      {admin && (
+                        <td>
+                          <div className="actions">
+                            <button className="btn-secondary" onClick={() => edit(item)}>Editar</button>
+                            <button className="btn-danger" onClick={() => remove(id)}>Excluir</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </AppShell>
   );
 }

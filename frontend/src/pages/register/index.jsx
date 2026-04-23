@@ -1,233 +1,68 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
-import "./styles.css";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../../services/api";
+import "../login/styles.css";
+
+const initialState = {
+  nome: "",
+  username: "",
+  email: "",
+  password: "",
+  telefone: "",
+  tipo: "Usuário",
+};
 
 export default function Register() {
-  const navigate = useNavigate();
-
-  const [tipos, setTipos] = useState([]);
-  const [loadingTipos, setLoadingTipos] = useState(true);
-
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    nome: "",
-    telefone: "",
-    tipo: "",
-    password: "",
-    password2: "",
-  });
-
+  const [form, setForm] = useState(initialState);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
 
-  useEffect(() => {
-    async function buscarTipos() {
-      try {
-        const res = await axios.get("http://127.0.0.1:8000/api/usuarios/tipo-choices/");
-        setTipos(res.data || []);
-      } catch (error) {
-        console.log("Erro ao buscar tipos:", error);
-        setTipos([]);
-      } finally {
-        setLoadingTipos(false);
-      }
-    }
-
-    buscarTipos();
-  }, []);
-
-  const setField = (campo, valor) => {
-    setForm((prev) => ({ ...prev, [campo]: valor }));
-  };
-
-  const validar = () => {
-    if (!form.username || !form.nome || !form.tipo || !form.password) {
-      return "Preencha os campos obrigatórios.";
-    }
-
-    if (form.password.length < 6) {
-      return "A senha deve ter pelo menos 6 caracteres.";
-    }
-
-    if (form.password !== form.password2) {
-      return "As senhas não conferem.";
-    }
-
-    return "";
-  };
-
-  const cadastrar = async (e) => {
-    e.preventDefault();
-    setMsg({ type: "", text: "" });
-
-    const erro = validar();
-    if (erro) {
-      setMsg({ type: "error", text: erro });
-      return;
-    }
-
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setMessage("");
+    setError("");
     setLoading(true);
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/register/", {
-        username: form.username,
-        email: form.email,
-        nome: form.nome,
-        telefone: form.telefone,
-        tipo: form.tipo,
-        password: form.password,
-      });
-
-      setMsg({ type: "success", text: "Cadastro realizado com sucesso!" });
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 800);
-    } catch (error) {
-      console.log("Erro no cadastro:", error);
-
-      const data = error?.response?.data;
-
-      if (data && typeof data === "object") {
-        const firstKey = Object.keys(data)[0];
-        const firstMsg = Array.isArray(data[firstKey]) ? data[firstKey][0] : String(data[firstKey]);
-        setMsg({ type: "error", text: firstMsg });
-      } else {
-        setMsg({ type: "error", text: "Não foi possível cadastrar." });
-      }
+      await api.post("/usuarios/", form);
+      setMessage("Usuário cadastrado com sucesso.");
+      setForm(initialState);
+    } catch (err) {
+      setError("Não foi possível cadastrar. Verifique se o endpoint de usuários aceita esse formato.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="registerPage">
-      <div className="registerLeft">
-        <div className="brandTop">
-          <div className="brandIcon">S</div>
-          <div>
-            <h2>Smart City TecnoVille</h2>
-            <p>Projeto Integrador · SENAI</p>
-          </div>
-        </div>
+    <div className="auth-page">
+      <section className="auth-hero">
+        <span className="hero-badge">Cadastro</span>
+        <h1>Novo usuário</h1>
+        <p>Esta página é desejável no projeto e já deixa o front preparado.</p>
+      </section>
 
-        <div className="leftContent">
-          <h1>Cadastre-se para acessar o painel inteligente.</h1>
-          <p>
-            Crie sua conta e acompanhe os sensores de temperatura, umidade,
-            luminosidade e contagem em tempo real.
-          </p>
-        </div>
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <h2>Cadastrar</h2>
+        <label>Nome<input className="auth-input" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required /></label>
+        <label>Username<input className="auth-input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></label>
+        <label>Email<input className="auth-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+        <label>Telefone<input className="auth-input" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></label>
+        <label>Senha<input className="auth-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></label>
+        <label>Tipo
+          <select className="auth-input" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+            <option>Usuário</option>
+            <option>Administrador</option>
+          </select>
+        </label>
 
-        <div className="leftFooter">© 2026 SENAI</div>
-      </div>
+        {message && <div className="auth-error" style={{ background: "rgba(16,185,129,.15)", borderColor: "rgba(16,185,129,.35)" }}>{message}</div>}
+        {error && <div className="auth-error">{error}</div>}
 
-      <div className="registerRight">
-        <div className="registerCard">
-          <div className="registerHeader">
-            <h1 className="registerTitle">Criar conta</h1>
-            <p className="registerSubtitle">Preencha seus dados para começar.</p>
-          </div>
-
-          <form className="registerForm" onSubmit={cadastrar}>
-            <div className="grid2">
-              <div className="field">
-                <label className="label">Usuário *</label>
-                <input
-                  className="input"
-                  value={form.username}
-                  onChange={(e) => setField("username", e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label className="label">E-mail</label>
-                <input
-                  className="input"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid2">
-              <div className="field">
-                <label className="label">Nome *</label>
-                <input
-                  className="input"
-                  value={form.nome}
-                  onChange={(e) => setField("nome", e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label className="label">Telefone</label>
-                <input
-                  className="input"
-                  value={form.telefone}
-                  onChange={(e) => setField("telefone", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="label">Tipo de usuário *</label>
-              <select
-                className="input"
-                value={form.tipo}
-                onChange={(e) => setField("tipo", e.target.value)}
-                disabled={loadingTipos}
-              >
-                <option value="">{loadingTipos ? "Carregando..." : "Selecione..."}</option>
-                {tipos.map((tipo) => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid2">
-              <div className="field">
-                <label className="label">Senha *</label>
-                <input
-                  className="input"
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setField("password", e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label className="label">Confirmar senha *</label>
-                <input
-                  className="input"
-                  type="password"
-                  value={form.password2}
-                  onChange={(e) => setField("password2", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {msg.text && (
-              <div className={msg.type === "success" ? "alert success" : "alert"}>
-                {msg.text}
-              </div>
-            )}
-
-            <button className="btnPrimary" type="submit" disabled={loading}>
-              {loading ? "Cadastrando..." : "Cadastrar"}
-            </button>
-
-            <p className="loginText">
-              Já tem conta? <Link to="/login">Entrar</Link>
-            </p>
-          </form>
-        </div>
-      </div>
+        <button className="auth-button" type="submit" disabled={loading}>{loading ? "Salvando..." : "Cadastrar"}</button>
+        <span className="auth-link-text">Já tem conta? <Link to="/login">Entrar</Link></span>
+      </form>
     </div>
   );
 }

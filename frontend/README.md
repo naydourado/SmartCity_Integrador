@@ -1,16 +1,20 @@
-# React + Vite
+# Frontend refeito - Smart City Integrador
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Substitua o conteúdo da pasta `frontend/src` por esta versão.
 
-Currently, two official plugins are available:
+## O que já cobre
+- login com JWT
+- armazenamento do token
+- proteção de rotas
+- tratamento de erro 401
+- logout
+- dashboard com 4 sensores
+- listagens em tabela
+- múltiplos endpoints
+- CRUD visual para admin
+- usuário comum apenas visualiza
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Ajustes que podem depender do seu backend
+- nomes exatos dos campos retornados pela API
+- endpoints de locais, responsáveis e usuários
+- ids (`id`, `idSensor`, `idAmbiente` etc.)

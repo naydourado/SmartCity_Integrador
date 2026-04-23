@@ -1,169 +1,90 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import "./styles.css";
+import AppShell from "../../components/AppShell";
+import api from "../../services/api";
+import { getUser, isAdmin } from "../../utils/auth";
+import { formatDateTime } from "../../utils/format";
+import "../../components/ui.css";
 
-export default function Home() {
+export default function Dashboard() {
   const navigate = useNavigate();
-
-  const [usuario, setUsuario] = useState(null);
   const [sensores, setSensores] = useState([]);
   const [historicos, setHistoricos] = useState([]);
   const [ambientes, setAmbientes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // ✅ AGORA ESTÁ NO LUGAR CERTO
-  const isAdmin = usuario?.tipo === "admin";
+  const user = getUser();
+  const admin = isAdmin(user);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const usuarioSalvo = localStorage.getItem("usuario");
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    if (usuarioSalvo) {
-      const usuarioObj = JSON.parse(usuarioSalvo);
-      setUsuario(usuarioObj);
-    }
-
-    const headers = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    async function carregarDados() {
+    async function load() {
       try {
         const [sensoresRes, historicosRes, ambientesRes] = await Promise.all([
-          axios.get("http://127.0.0.1:8000/api/sensores/", { headers }),
-          axios.get("http://127.0.0.1:8000/api/historicos-recentes/", { headers }),
-          axios.get("http://127.0.0.1:8000/api/ambientes/", { headers }),
+          api.get("/sensores/"),
+          api.get("/historicos-recentes/"),
+          api.get("/ambientes/"),
         ]);
-
-        setSensores(sensoresRes.data);
-        setHistoricos(historicosRes.data);
-        setAmbientes(ambientesRes.data);
-      } catch (error) {
-        console.log("Erro ao carregar dados:", error);
-
-        if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("usuario");
-          navigate("/login");
-        }
+        setSensores(Array.isArray(sensoresRes.data) ? sensoresRes.data : sensoresRes.data.results || []);
+        setHistoricos(Array.isArray(historicosRes.data) ? historicosRes.data : historicosRes.data.results || []);
+        setAmbientes(Array.isArray(ambientesRes.data) ? ambientesRes.data : ambientesRes.data.results || []);
       } finally {
         setLoading(false);
       }
     }
+    load();
+  }, []);
 
-    carregarDados();
-  }, [navigate]);
-
-  const sair = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    navigate("/login");
-  };
-
-  const abrirSensor = (tipo) => {
-    navigate(`/sensores/${tipo}`);
-  };
-
-  const totalSensores = sensores.length;
-  const sensoresAtivos = sensores.filter((s) => s.status).length;
-  const medicoes24h = historicos.length;
-  const totalAmbientes = ambientes.length;
-
-  const porcentagemAtivos =
-    totalSensores > 0 ? Math.round((sensoresAtivos / totalSensores) * 100) : 0;
-
-  const contarPorTipo = (tipo) =>
-    sensores.filter((s) => s.sensor === tipo).length;
-
-  const ultimasMedicoes = historicos.slice(0, 6);
-  const statusSensores = sensores.slice(0, 6);
-
-  const formatarData = (data) => {
-    if (!data) return "-";
-    return new Date(data).toLocaleString("pt-BR");
-  };
-
-  const capitalizar = (t) => t?.charAt(0).toUpperCase() + t?.slice(1);
-
-  const dataAtualizacao = new Date().toLocaleString("pt-BR");
+  const sensoresAtivos = useMemo(() => sensores.filter((item) => item.status).length, [sensores]);
+  const tipos = ["temperatura", "umidade", "luminosidade", "contador"];
 
   return (
-    <div className="homePage">
-      <aside className="homeSidebar">
-        <div> {/* ✅ AGORA FECHA CORRETAMENTE */}
-          <div className="brandTop">
-            <div>
-              <h2>Smart City TecnoVille</h2>
-              <p>Projeto Integrador · SENAI</p>
-            </div>
+    <AppShell
+      title="Dashboard"
+      subtitle={admin ? "Visão geral administrativa do sistema." : "Visão geral de consulta do sistema."}
+    >
+      <section className="page-grid">
+        <div className="grid-cards">
+          <div className="card"><h3>Total de sensores</h3><p className="kpi-value">{loading ? "..." : sensores.length}</p></div>
+          <div className="card"><h3>Sensores ativos</h3><p className="kpi-value">{loading ? "..." : sensoresAtivos}</p></div>
+          <div className="card"><h3>Ambientes</h3><p className="kpi-value">{loading ? "..." : ambientes.length}</p></div>
+          <div className="card"><h3>Medições recentes</h3><p className="kpi-value">{loading ? "..." : historicos.length}</p></div>
+        </div>
+
+        <div className="grid-cards">
+          {tipos.map((tipo) => (
+            <button key={tipo} className="card btn-secondary" onClick={() => navigate(`/sensores/${tipo}`)}>
+              <h3>{tipo.charAt(0).toUpperCase() + tipo.slice(1)}</h3>
+              <p>Ir para a listagem específica.</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="card">
+          <h3>Últimas medições</h3>
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Sensor</th>
+                  <th>Valor</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historicos.slice(0, 8).map((item) => (
+                  <tr key={item.id || `${item.sensor}-${item.timestamp}`}>
+                    <td>{item.sensor_nome || item.sensor || "-"}</td>
+                    <td>{item.valor ?? "-"}</td>
+                    <td>{formatDateTime(item.timestamp)}</td>
+                  </tr>
+                ))}
+                {!historicos.length && !loading && (
+                  <tr><td colSpan="3">Nenhuma medição encontrada.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
-
-          <nav className="sidebarMenu">
-            <button className="menuItem active">Home</button>
-
-            <button className="menuItem" onClick={() => navigate("/sensores")}>
-              Sensores
-            </button>
-
-            <button className="menuItem" onClick={() => navigate("/historicos")}>
-              Históricos
-            </button>
-
-            <button
-              className="menuItem"
-              onClick={() => navigate("/historicos-recentes")}
-            >
-              Históricos recentes
-            </button>
-
-            {isAdmin && (
-              <>
-                <button className="menuItem" onClick={() => navigate("/ambientes")}>
-                  Ambientes
-                </button>
-
-                <button
-                  className="menuItem"
-                  onClick={() => navigate("/microcontroladores")}
-                >
-                  Microcontroladores
-                </button>
-              </>
-            )}
-          </nav>
-        </div> {/* ✅ FECHAMENTO QUE FALTAVA */}
-
-        <button className="logoutButton" onClick={sair}>
-          Sair
-        </button>
-      </aside>
-
-      <main className="homeContent">
-        <header className="contentHeader">
-          <div>
-            <h1>Olá, {usuario?.nome || "Usuário"}!</h1>
-            <p>Visão geral do monitoramento.</p>
-          </div>
-
-          <span>Atualizado em {dataAtualizacao}</span>
-        </header>
-
-        {loading ? (
-          <p>Carregando...</p>
-        ) : (
-          <>
-            <h3>Total sensores: {totalSensores}</h3>
-            <h3>Ativos: {sensoresAtivos}</h3>
-            <h3>Ambientes: {totalAmbientes}</h3>
-          </>
-        )}
-      </main>
-    </div>
+        </div>
+      </section>
+    </AppShell>
   );
 }
