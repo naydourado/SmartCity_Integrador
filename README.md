@@ -2,8 +2,6 @@
 
 Sistema web para monitoramento de ambientes com sensores (temperatura, umidade, luminosidade e contador).
 
----
-
 ## Funcionalidades
 
 - Autenticação com JWT  
@@ -18,8 +16,6 @@ Sistema web para monitoramento de ambientes com sensores (temperatura, umidade, 
 - Histórico de medições  
 - Importação de dados Excel via script 
 
----
-
 ## Tecnologias
 
 **Backend**
@@ -30,8 +26,6 @@ Sistema web para monitoramento de ambientes com sensores (temperatura, umidade, 
 **Frontend**
 - React  
 - Axios  
-
----
 
 ## Como rodar
 
