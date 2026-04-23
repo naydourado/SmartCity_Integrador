@@ -38,11 +38,9 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
 
-        # admin vê todos os usuários
         if self.request.user.is_staff:
             return qs
 
-        # user comum vê só o próprio perfil
         return qs.filter(user=self.request.user)
 
     def get_serializer_class(self):
@@ -69,13 +67,6 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             {"value": valor, "label": nome}
             for valor, nome in Usuario.TIPO_CHOICES
         ])
-
-    def dispatch(self, request, *args, **kwargs):
-        # user comum não pode criar, editar ou excluir usuários
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not request.user.is_staff:
-                raise PermissionDenied("Você não tem permissão para essa ação.")
-        return super().dispatch(request, *args, **kwargs)
 
 
 class RegisterView(APIView):
